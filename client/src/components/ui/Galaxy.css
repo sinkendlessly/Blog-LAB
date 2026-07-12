@@ -1,0 +1,12 @@
+.galaxy-container {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.galaxy-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}

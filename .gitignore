@@ -1,0 +1,173 @@
+# ─── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+develop-eggs/
+downloads/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+*.mo
+*.pot
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.tox/
+.hypothesis/
+perf/
+
+# ─── 模型权重 ──────────────────────────────────────────
+*.pth
+*.pt
+*.pkl
+*.h5
+*.hdf5
+*.onnx
+*.bin
+*.ckpt
+*.safetensors
+*.mar
+*.t7
+*.nnet
+*.model
+*.params
+checkpoints/
+weights/
+
+# ─── Node.js ────────────────────────────────────────────
+node_modules/
+client/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.pnpm/
+pnpm-lock.yaml
+.yarn-integrity
+
+# ─── 构建产物 ──────────────────────────────────────────
+client/dist/
+client/build/
+server/static/
+*.next/
+out/
+.turbo/
+.cache/
+.eslintcache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+client/vite.config.js
+client/vite.config.d.ts
+
+# ─── 本地密钥 / 环境变量 ──────────────────────────────
+.env
+.env.local
+.env.*.local
+server/.env
+client/.env
+*.key
+*.pem
+*.crt
+*.cert
+credentials.json
+service-account.json
+*.cred
+
+# ─── IDE / 编辑器 ──────────────────────────────────────
+.vscode/
+.idea/
+.codebuddy/
+.claude/
+.agents/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.history/
+*.iml
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# ─── 操作系统 ──────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ─── 日志 ──────────────────────────────────────────────
+*.log
+logs/
+server/server.log
+
+# ─── Docker 数据卷（本地开发） ─────────────────────────
+mysql_data/
+redis_data/
+pg_data/
+minio_data/
+
+# ─── Python 虚拟环境 ────────────────────────────────────
+venv/
+env/
+.venv/
+.venv_*/
+ENV/
+.conda/
+miniconda/
+miniforge/
+
+# ─── 数据库迁移缓存 ────────────────────────────────────
+server/alembic/versions/__pycache__/
+
+# ─── 上传文件（本地存储） ──────────────────────────────
+uploads/
+server/uploads/
+client/public/uploads/
+
+# ─── 测试产物 ──────────────────────────────────────────
+*.coverage.*
+hypothesis/
+
+# ─── 编辑器临时文件 ────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+
+# ─── 项目特定 ──────────────────────────────────────────
+# 本地 MySQL / Redis 数据
+data/
+*.sql
+*.sqlite
+*.sqlite3
+
+# 临时测试文件
+tmp_*
+*.tmp_*
+test_*.log
+
+# Claude Code 技能锁（本地工具状态）
+skills-lock.json

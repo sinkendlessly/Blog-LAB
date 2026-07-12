@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669"/>
+      <stop offset="100%" style="stop-color:#0891B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1100" cy="100" r="250" fill="rgba(255,255,255,0.05)"/>
+  <text x="80" y="280" font-family="system-ui,sans-serif" font-size="28" fill="rgba(255,255,255,0.6)">BACKEND</text>
+  <text x="80" y="360" font-family="system-ui,sans-serif" font-size="52" font-weight="700" fill="white">FastAPI</text>
+  <text x="80" y="430" font-family="system-ui,sans-serif" font-size="52" font-weight="700" fill="white">异步编程深度解析</text>
+  <text x="80" y="490" font-family="system-ui,sans-serif" font-size="20" fill="rgba(255,255,255,0.7)">Async/Await · 并发 · 性能优化</text>
+</svg>

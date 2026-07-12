@@ -1,0 +1,90 @@
+services:
+  # ============ MySQL 数据库 ============
+  db:
+    image: mysql:8.0
+    container_name: blogshare-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-blogshare}
+      MYSQL_USER: ${MYSQL_USER:-blogshare}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_strong_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root_password}
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-changeme_root_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - blogshare-net
+
+  # ============ Redis 缓存 ============
+  redis:
+    image: redis:7-alpine
+    container_name: blogshare-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blogshare-net
+
+  # ============ FastAPI 后端 ============
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: blogshare-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: db
+      REDIS_HOST: redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - blogshare-net
+
+  # ============ Nginx 前端托管 + 反向代理 ============
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: blogshare-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+    networks:
+      - blogshare-net
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  blogshare-net:
+    driver: bridge

@@ -1,0 +1,19 @@
+{
+  "name": "Blog LAB · 知识分享社区",
+  "short_name": "Blog LAB",
+  "description": "发现和分享优质技术文章的知识社区",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "technology"],
+  "lang": "zh-CN"
+}

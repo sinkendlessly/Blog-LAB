@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="150" cy="550" r="350" fill="rgba(255,255,255,0.04)"/>
+  <text x="80" y="280" font-family="system-ui,sans-serif" font-size="28" fill="rgba(255,255,255,0.6)">LANGUAGE</text>
+  <text x="80" y="360" font-family="system-ui,sans-serif" font-size="52" font-weight="700" fill="white">TypeScript 5.0</text>
+  <text x="80" y="430" font-family="system-ui,sans-serif" font-size="52" font-weight="700" fill="white">类型系统进阶</text>
+  <text x="80" y="490" font-family="system-ui,sans-serif" font-size="20" fill="rgba(255,255,255,0.7)">泛型 · 装饰器 · 类型体操</text>
+</svg>
