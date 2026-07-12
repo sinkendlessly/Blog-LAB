@@ -4,6 +4,36 @@
 
 > **默认暗色模式（霓虹赛博风）**，点击侧栏底部切换亮色。
 
+<p align="center">
+  <img src="screenshots/5.png" alt="首页" width="90%" />
+  <br />
+  <em>🏠 首页 — 银河动态背景 + 杂志风格卡片 + 打字机标题</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/2.png" alt="文章详情" width="90%" />
+  <br />
+  <em>📖 文章详情页 — Markdown 渲染 + 封面图 + 目录 + 评论区</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/1.png" alt="编辑器" width="90%" />
+  <br />
+  <em>✍️ Typora 风格编辑器 — WPS Ribbon 工具栏 + 实时预览</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/3.png" alt="管理后台" width="90%" />
+  <br />
+  <em>📊 管理后台 — 数据概览仪表盘</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/6.png" alt="侧栏与排行" width="90%" />
+  <br />
+  <em>📌 侧栏导航 + 热门排行 + 动态背景切换</em>
+</p>
+
 ## 技术栈
 
 | 层级 | 技术 |
