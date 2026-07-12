@@ -5,33 +5,27 @@
 > **默认暗色模式（霓虹赛博风）**，点击侧栏底部切换亮色。
 
 <p align="center">
-  <img src="screenshots/5.png" alt="首页" width="90%" />
+  <img src="screenshots/登录页.png" alt="登录页" width="90%" />
   <br />
-  <emd登录渲染展示</em>
+  <em>🔐 登录页 — 手机验证码登录</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/2.png" alt="文章详情" width="90%" />
+  <img src="screenshots/主界面文章展示.png" alt="主界面文章展示" width="90%" />
   <br />
-  <em>📖 文章详情页 — Markdown 渲染 + 封面图 + 目录 + 评论区</em>
+  <em>📰 主界面 — 文章列表 + 杂志风格卡片 + 动态背景</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/1.png" alt="编辑器" width="90%" />
+  <img src="screenshots/主界面（亮色）.png" alt="亮色模式" width="90%" />
   <br />
-  <em>✍️ Typora 风格编辑器 — WPS Ribbon 工具栏 + 实时预览</em>
+  <em>☀️ 亮色模式 — 一键切换主题</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/3.png" alt="管理后台" width="90%" />
+  <img src="screenshots/测试用户（团队）.png" alt="测试用户" width="90%" />
   <br />
-  <em>📊 管理后台 — 数据概览仪表盘</em>
-</p>
-
-<p align="center">
-  <img src="screenshots/6.png" alt="侧栏与排行" width="90%" />
-  <br />
-  <em>📌 侧栏导航 + 热门排行 + 动态背景切换</em>
+  <em>👥 团队用户 — 多人协作账号体系</em>
 </p>
 
 ## 技术栈
