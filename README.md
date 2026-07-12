@@ -7,7 +7,7 @@
 <p align="center">
   <img src="screenshots/5.png" alt="首页" width="90%" />
   <br />
-  <em>🏠 首页 — 银河动态背景 + 杂志风格卡片 + 打字机标题</em>
+  <emd登录渲染展示</em>
 </p>
 
 <p align="center">
