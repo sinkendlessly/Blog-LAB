@@ -161,6 +161,7 @@ hypothesis/
 # 本地 MySQL / Redis 数据
 data/
 *.sql
+!database/init.sql
 *.sqlite
 *.sqlite3
 
