@@ -7,6 +7,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
+    # ===== 测试模式 =====
+    TESTING: bool = False
+    # 完整数据库连接串，非空时覆盖 MYSQL_* 拼接（供测试使用）
+    DATABASE_URL: str = ""
+
     # ===== MySQL =====
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
@@ -74,6 +79,8 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return (
             f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
             f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}?charset=utf8mb4"

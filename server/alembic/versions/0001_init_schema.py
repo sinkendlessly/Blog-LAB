@@ -11,6 +11,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 
 revision: str = "0001"
@@ -78,7 +79,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("slug", sa.String(length=300), nullable=False),
-        sa.Column("content", sa.Text().with_variant(sa.Text(4294967295), "mysql"), nullable=False),
+        sa.Column("content", sa.Text().with_variant(LONGTEXT(), "mysql"), nullable=False),
         sa.Column("excerpt", sa.String(length=500), nullable=True),
         sa.Column("cover_image", sa.String(length=500), nullable=True),
         sa.Column(
