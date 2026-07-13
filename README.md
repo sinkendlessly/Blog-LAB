@@ -271,6 +271,7 @@ docker compose up -d --build
 - 集成 WebGL 动态背景（Galaxy 银河粒子 / Hyperspeed 霓虹高速公路），支持暗色/亮色主题切换
 - 嵌套评论系统（树形结构，支持点赞/排序/删除权限）
 - OSS 存储抽象层，支持本地磁盘 / 阿里云 OSS 一键切换
+- PWA 支持，可添加到主屏幕
 - 设计并发安全体系：DB 唯一约束 + IntegrityError 兜底 + SET NX 原子去重 + 缓存 TTL 抖动防护
 - 搭建中间件栈：请求追踪 ID / 访问日志 / 安全响应头 / Redis 限流
 - 集成 RabbitMQ 异步消息队列，将 5 条通知链路从同步写 DB 改造为异步投递，消除请求阻塞
