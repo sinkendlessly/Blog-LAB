@@ -173,7 +173,7 @@ export function MarkdownEditor({
     <div
       ref={editorRef}
       className={cn(
-        "typora-editor relative flex flex-col",
+        "typora-editor relative flex h-full min-h-0 flex-col",
         mode === "preview" && "is-preview",
         mode === "edit" && "is-edit",
         className,
@@ -211,7 +211,7 @@ export function MarkdownEditor({
       </div>
 
       {/* ═══ 编辑器主体（浅灰底色，全宽全高铺满） ═══ */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden [&_.w-md-editor]:!h-full [&_.w-md-editor-content]:!h-full [&_.w-md-editor-text]:!h-full">
         <div className="h-full bg-muted/20">
           <MDEditor
             value={value}
