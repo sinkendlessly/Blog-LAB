@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
+from app.core.rabbitmq import publish_message as mq_publish
 from app.core.redis import get_redis
 from app.middleware.error_handler import AppException
 from app.models.article import Article
@@ -17,7 +19,6 @@ from app.models.user import User
 from app.schemas.article import ArticleCreate, ArticleUpdate
 from app.services.cache_service import CacheService
 from app.services.counter_service import CounterService
-from app.services.recommendation_service import RecommendationService
 from app.utils.pagination import apply_cursor, encode_cursor
 from app.utils.redis_keys import RedisKeys
 from app.utils.slug import slugify
@@ -82,8 +83,22 @@ class ArticleService:
     async def update(
         self, article: Article, author: User, payload: ArticleUpdate
     ) -> Article:
+        from sqlalchemy import select
+
         if article.author_id != author.id and author.role != "ADMIN":
             raise AppException("无权修改他人文章", 403, "FORBIDDEN")
+
+        # 加行级锁重新读取，防止并发丢失更新（lost update）
+        locked = await self.db.execute(
+            select(Article).where(Article.id == article.id).with_for_update()
+        )
+        locked_article = locked.scalar_one_or_none()
+        if not locked_article:
+            raise AppException("文章不存在", 404, "ARTICLE_NOT_FOUND")
+
+        # 用加锁后的对象继续操作
+        article = locked_article
+        article.version += 1  # version 自增用于检测冲突
 
         old_status = article.status
         if payload.title is not None:
@@ -119,9 +134,9 @@ class ArticleService:
             f"cache:article:slug:{article.slug}",
         )
 
-        # 发布/下架时刷新热度
+        # 发布/下架时异步刷新热度
         if article.status == "PUBLISHED":
-            await RecommendationService(self.db).refresh_article_score(article.id)
+            await self._publish_ranking_refresh(article.id)
         else:
             await self.redis.zrem(RedisKeys.HOT_ARTICLES, str(article.id))
         return article
@@ -315,11 +330,16 @@ class ArticleService:
             user.id if user else None, article.id, ip_address
         )
         if added:
-            await RecommendationService(self.db).refresh_article_score(article.id)
+            await self._publish_ranking_refresh(article.id)
         if user:
             await HistoryService().record(user.id, article.id)
 
     # ============ 工具 ============
+    @staticmethod
+    async def _publish_ranking_refresh(article_id: int) -> None:
+        """异步发布排行刷新消息（MQ 攒批处理，不阻塞请求）。"""
+        await mq_publish(settings.RANKING_QUEUE, {"type": "refresh_score", "article_id": article_id})
+
     async def _unique_slug(self, title: str) -> str:
         base = slugify(title)
 

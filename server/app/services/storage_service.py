@@ -27,12 +27,15 @@ class LocalStorage(StorageBackend):
     """本地磁盘存储。"""
 
     async def save(self, content: bytes, ext: str, category: str = "images") -> str:
+        import asyncio
         date_path = datetime.now().strftime("%Y/%m/%d")
         save_dir = Path(settings.UPLOAD_DIR) / category / date_path
         save_dir.mkdir(parents=True, exist_ok=True)
         unique_name = f"{uuid.uuid4().hex[:16]}.{ext}"
         save_path = save_dir / unique_name
-        save_path.write_bytes(content)
+        # 同步 write_bytes 使用线程池执行，避免阻塞事件循环
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, save_path.write_bytes, content)
         return f"/uploads/{category}/{date_path}/{unique_name}"
 
 

@@ -3,15 +3,12 @@
 替代原来的 Like + Favorite + CommentLike + Share 四张表。
 """
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, func, ForeignKey, Integer, Enum as SAEnum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-
-if TYPE_CHECKING:
-    from app.models.user import User
+from app.models.user import User
 
 
 class Interaction(Base):

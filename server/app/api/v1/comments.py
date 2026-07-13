@@ -1,5 +1,5 @@
 """评论路由：创建 / 列表（树形）/ 删除 / 点赞。"""
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from app.models.comment import Comment
 from app.models.user import User
 from app.middleware.error_handler import AppException
 from app.schemas.comment import CommentCreate, CommentOut
-from app.schemas.common import OkResponse
+from app.schemas.common import OkResponse, PageResponse, PageMeta
 from app.services.comment_service import CommentService
 from app.services.notification_service import NotificationService
 
@@ -75,16 +75,25 @@ async def create_comment(
     )
 
 
-@router.get("", response_model=List[CommentOut])
+@router.get("", response_model=PageResponse[CommentOut])
 async def list_comments(
     article_id: int = Query(...),
-    sort: str = Query("latest", regex="^(latest|oldest|hot)$"),
+    sort: str = Query("latest", pattern="^(latest|oldest|hot)$"),
+    cursor: Optional[str] = Query(None, description="游标分页（上一页返回的 next_cursor）"),
+    limit: int = Query(20, ge=1, le=100, description="每页根评论数"),
     db: AsyncSession = Depends(get_db),
     user: Optional[User] = Depends(get_current_user_optional),
 ):
-    """获取文章评论树（含点赞状态）。"""
+    """获取文章评论树（含点赞状态），根评论游标分页，子评论全量加载。"""
     service = CommentService(db)
-    return await service.list_tree(article_id, sort, user.id if user else None)
+    items, next_cursor = await service.list_tree(
+        article_id, sort, user.id if user else None,
+        cursor=cursor, limit=limit,
+    )
+    return PageResponse(
+        items=items,
+        meta=PageMeta(next_cursor=next_cursor, has_more=next_cursor is not None),
+    )
 
 
 @router.post("/{comment_id}/like")

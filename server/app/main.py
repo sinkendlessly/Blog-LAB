@@ -22,20 +22,9 @@ except Exception:
     pass
 
 # 同样 patch SQLAlchemy 的 MySQLDialect.do_ping
-try:
-    from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
-    _orig_do_ping = MySQLDialect_pymysql.do_ping
-    async def _patched_do_ping(self, dbapi_connection):
-        if hasattr(dbapi_connection, 'ping'):
-            try:
-                dbapi_connection.ping(reconnect=True)
-            except Exception:
-                from sqlalchemy.exc import DBAPIError
-                raise
-        return True
-    MySQLDialect_pymysql.do_ping = _patched_do_ping
-except Exception:
-    pass
+# SQLAlchemy 2.0 的 do_ping 是同步调用，不需要 async patch
+# aiomysql 的 ping 兼容性已在第一段 monkey-patch 中处理
+# 如果还存在 ping 问题，设置 pool_pre_ping=False 即可
 
 from pathlib import Path
 from fastapi import FastAPI
@@ -50,10 +39,14 @@ from app.core.rabbitmq import init_rabbitmq, close_rabbitmq
 from app.middleware.body_size_limit import BodySizeLimitMiddleware
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.request_timeout import RequestTimeoutMiddleware
 from app.middleware.trace_id import RequestIDMiddleware
 from app.middleware.access_log import AccessLogMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
-from app.tasks.notification_consumer import start_consumer, stop_consumer
+from app.tasks.notification_consumer import start_consumer as start_notification_consumer
+from app.tasks.notification_consumer import stop_consumer as stop_notification_consumer
+from app.tasks.image_consumer import start_image_consumer, stop_image_consumer
+from app.tasks.ranking_consumer import start_ranking_consumer, stop_ranking_consumer
 from app.tasks.scheduler import start_scheduler, stop_scheduler
 
 # 确保所有 ORM 模型注册到 Base.metadata（relationship 解析需要）
@@ -84,7 +77,9 @@ async def lifespan(app: FastAPI):
     await init_redis()
     start_scheduler()
     await init_rabbitmq()
-    await start_consumer()
+    await start_notification_consumer()
+    await start_image_consumer()
+    await start_ranking_consumer()
 
     # 安全检查：检测是否仍在使用默认密钥
     _check_security()
@@ -92,7 +87,9 @@ async def lifespan(app: FastAPI):
     logger.info("BlogShare server starting...")
     yield
     # 关闭
-    await stop_consumer()
+    await stop_ranking_consumer()
+    await stop_image_consumer()
+    await stop_notification_consumer()
     await stop_scheduler()
     await close_rabbitmq()
     await close_redis()
@@ -124,6 +121,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(AccessLogMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestTimeoutMiddleware)
 
 # 异常处理
 register_exception_handlers(app)

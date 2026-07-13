@@ -263,128 +263,136 @@ export default function EditorPage() {
         onPublish={handlePublishClick}
       />
 
-      {/* 编辑器主体 — 全宽全高，最大化画布 */}
-      <div className="flex-1 overflow-hidden">
-        <MarkdownEditor
-          value={content}
-          onChange={handleContentChange}
-          onSave={(v) => handleSave(v)}
-          saving={saveMutation.isPending}
-        />
+      {/* 编辑器主体 — 左侧封面 + 右侧Markdown */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 左侧封面编辑面板 */}
+        <div className="flex w-56 shrink-0 flex-col border-r p-4 overflow-y-auto">
+          <p className="mb-3 text-sm font-medium">文章封面</p>
+
+          {/* 封面预览 */}
+          <div className="mb-3 overflow-hidden rounded-lg border bg-muted/30" style={{ aspectRatio: "16/9" }}>
+            {coverImage ? (
+              <img
+                src={coverImage}
+                alt="封面"
+                className="h-full w-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                无封面
+              </div>
+            )}
+          </div>
+
+          {/* URL 输入 */}
+          <input
+            type="text"
+            value={coverImage}
+            onChange={(e) => setCoverImage(e.target.value)}
+            placeholder="图片 URL..."
+            className="mb-2 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+          />
+
+          {/* 上传按钮 */}
+          <div className="relative mb-2">
+            <input
+              type="file"
+              accept="image/*"
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const { url } = await uploadApi.image(file);
+                  setCoverImage(url);
+                } catch { /* silent */ }
+              }}
+            />
+            <button
+              type="button"
+              className="w-full rounded-md border border-input px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+            >
+              上传图片
+            </button>
+          </div>
+
+          {/* 移除按钮 */}
+          {coverImage && (
+            <button
+              onClick={() => setCoverImage("")}
+              className="rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-red-500"
+            >
+              移除封面
+            </button>
+          )}
+
+          {/* 分隔线 */}
+          <div className="my-3 border-t" />
+
+          {/* 分类 */}
+          <p className="mb-1.5 text-xs font-medium">分类</p>
+          <select
+            value={categoryId ?? ""}
+            onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+            className="mb-3 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">无分类</option>
+            {categories?.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+
+          {/* 标签 ID */}
+          <p className="mb-1.5 text-xs font-medium">标签 ID</p>
+          <input
+            type="text"
+            value={tagIds.join(", ")}
+            onChange={(e) =>
+              setTagIds(
+                e.target.value
+                  .split(",")
+                  .map((s) => Number(s.trim()))
+                  .filter((n) => !isNaN(n))
+              )
+            }
+            placeholder="例: 1, 2, 3"
+            className="mb-3 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+          />
+
+          {/* 摘要 — 占满剩余空间 */}
+          <p className="mb-1.5 text-xs font-medium">摘要</p>
+          <textarea
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            placeholder="文章摘要（可选）"
+            maxLength={500}
+            className="flex-1 w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+            style={{ minHeight: "80px" }}
+          />
+        </div>
+
+        {/* 右侧 Markdown 编辑器 */}
+        <div className="flex-1 overflow-hidden">
+          <MarkdownEditor
+            value={content}
+            onChange={handleContentChange}
+            onSave={(v) => handleSave(v)}
+            saving={saveMutation.isPending}
+          />
+        </div>
       </div>
 
       {/* 发布设置弹窗 */}
       <Dialog open={publishOpen} onClose={() => setPublishOpen(false)}>
         <DialogHeader>
-          <DialogTitle>发布设置</DialogTitle>
+          <DialogTitle>发布确认</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            填写以下信息后提交审核
+            确认将文章提交审核？提交后管理员审核通过即可上线。
           </p>
         </DialogHeader>
-
-        <div className="space-y-4">
-          {/* 分类 */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">分类</label>
-            <select
-              value={categoryId ?? ""}
-              onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">无分类</option>
-              {categories?.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.article_count})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 标签 */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">标签 ID（逗号分隔）</label>
-            <input
-              type="text"
-              value={tagIds.join(", ")}
-              onChange={(e) =>
-                setTagIds(
-                  e.target.value
-                    .split(",")
-                    .map((s) => Number(s.trim()))
-                    .filter((n) => !isNaN(n))
-                )
-              }
-              placeholder="例: 1, 2, 3"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          {/* 封面 */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">封面图</label>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  placeholder="图片 URL 或点击上传"
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
-                <div className="relative shrink-0">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const { url } = await uploadApi.image(file);
-                        setCoverImage(url);
-                      } catch { /* silent */ }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="rounded-md border border-input px-3 py-2 text-sm transition-colors hover:bg-accent"
-                  >
-                    上传
-                  </button>
-                </div>
-              </div>
-              {coverImage && (
-                <div className="relative overflow-hidden rounded-lg border">
-                  <img
-                    src={coverImage}
-                    alt="封面预览"
-                    className="h-32 w-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                  />
-                  <button
-                    onClick={() => setCoverImage("")}
-                    className="absolute right-1 top-1 rounded-md bg-background/80 px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    移除
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 摘要 */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">摘要</label>
-            <textarea
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="文章摘要（可选）"
-              rows={3}
-              maxLength={500}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-            />
-          </div>
-        </div>
 
         <DialogFooter>
           <button
@@ -397,7 +405,7 @@ export default function EditorPage() {
             onClick={doPublish}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
-            确认发布
+            确认提交
           </button>
         </DialogFooter>
       </Dialog>

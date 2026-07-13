@@ -34,12 +34,10 @@ async def init_rabbitmq() -> None:
             timeout=10,
         )
         _channel = await _connection.channel()
-        # 声明通知队列（持久化，重启不丢失）
-        await _channel.declare_queue(
-            settings.NOTIFICATION_QUEUE,
-            durable=True,
-        )
-        logger.info("RabbitMQ connected: %s", settings.RABBITMQ_HOST)
+        # 声明所有队列（持久化，重启不丢失）
+        for q in [settings.NOTIFICATION_QUEUE, settings.IMAGE_PROCESSING_QUEUE, settings.RANKING_QUEUE]:
+            await _channel.declare_queue(q, durable=True)
+        logger.info("RabbitMQ connected: %s, queues=%d", settings.RABBITMQ_HOST, 3)
     except Exception as e:
         logger.warning("RabbitMQ unavailable (%s), notifications will be disabled", e)
         _connection = None

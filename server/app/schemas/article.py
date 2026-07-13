@@ -60,6 +60,7 @@ class ArticleOut(BaseModel):
     cover_image: Optional[str] = None
     status: str
     views: int
+    version: int = Field(default=1, description="乐观锁版本号")
     author: UserBrief
     category: Optional[CategoryOut] = None
     tags: List[TagOut] = []

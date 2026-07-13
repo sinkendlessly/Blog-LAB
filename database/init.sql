@@ -1,6 +1,6 @@
 -- ============================================================
 -- Blog LAB · 数据库完整建表脚本
--- 基于项目 SQLAlchemy 模型生成（2026-07-13）
+-- 基于项目 SQLAlchemy 模型生成（2026-07-14）
 -- 适用于 MySQL 8.0+
 --
 -- 使用方式：
@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS articles (
     category_id     INT             NULL,
     views           INT             NOT NULL DEFAULT 0,
     is_pinned       TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '管理员置顶',
+    version         INT             NOT NULL DEFAULT 1 COMMENT '乐观锁版本号',
     created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     published_at    DATETIME        NULL,

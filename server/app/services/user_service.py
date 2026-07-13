@@ -101,27 +101,42 @@ class UserService:
         """关注用户，返回是否新建（已关注则取消，toggle 模式）。
 
         注意：这里采用 toggle 语义方便前端；如需明确关注/取关，前端应分别调用。
+
+        并发安全策略（三重防护）：
+        ① 正常路径：SELECT → 不存在则 INSERT，存在则 DELETE
+        ② 复合主键：DB 层 PRIMARY KEY(follower_id, following_id) 防止重复
+        ③ 异常兜底：并发 INSERT 冲突时捕获 IntegrityError，返回已关注
         """
+        import logging
+        from sqlalchemy.exc import IntegrityError
+        logger = logging.getLogger(__name__)
+
         if follower.id == following_id:
             raise AppException("不能关注自己", 400, "CANNOT_FOLLOW_SELF")
 
         # 确认目标用户存在
         await self.get_by_id(following_id)
 
-        existing = await self.db.execute(
-            select(Follow).where(
-                Follow.follower_id == follower.id,
-                Follow.following_id == following_id,
+        try:
+            existing = await self.db.execute(
+                select(Follow).where(
+                    Follow.follower_id == follower.id,
+                    Follow.following_id == following_id,
+                )
             )
-        )
-        rel = existing.scalar_one_or_none()
-        if rel:
-            await self.db.delete(rel)
+            rel = existing.scalar_one_or_none()
+            if rel:
+                await self.db.delete(rel)
+                await self.db.flush()
+                return False  # 已取消关注
+            self.db.add(Follow(follower_id=follower.id, following_id=following_id))
             await self.db.flush()
-            return False  # 已取消关注
-        self.db.add(Follow(follower_id=follower.id, following_id=following_id))
-        await self.db.flush()
-        return True  # 新关注
+            return True  # 新关注
+        except IntegrityError:
+            # 并发 INSERT 主键冲突 → 记录已被另一请求插入 → 已关注
+            await self.db.rollback()
+            logger.warning("concurrent follow conflict: %d -> %d", follower.id, following_id)
+            return True
 
     async def is_following(self, follower_id: int, following_id: int) -> bool:
         result = await self.db.execute(

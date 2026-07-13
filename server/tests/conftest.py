@@ -62,6 +62,10 @@ class FakeRedis:
     def __init__(self):
         self._data: dict = {}
         self._expiry: dict = {}  # key → expiry timestamp
+        # pipeline 缓存（FakeRedisPipeline 写入此处，execute 时刷入 _data）
+        self._pipeline_cache: dict = {}
+        self._pipeline_expiry: dict = {}
+        self._in_pipeline = False
 
     def _is_expired(self, key: str) -> bool:
         import time
@@ -75,6 +79,10 @@ class FakeRedis:
         for k in expired:
             self._data.pop(k, None)
             self._expiry.pop(k, None)
+
+    def pipeline(self, transaction: bool = True):
+        """返回一个 FakeRedisPipeline，支持 async with 语法。"""
+        return FakeRedisPipeline(self)
 
     async def get(self, key: str) -> str | None:
         self._evict()
@@ -124,6 +132,8 @@ class FakeRedis:
         self._evict()
         return key in self._data
 
+    # ============ ZSet 操作 ============
+
     async def zadd(self, key: str, mapping: dict, **kwargs) -> int:
         return 0
 
@@ -136,10 +146,64 @@ class FakeRedis:
     async def zcount(self, key: str, min: str, max: str) -> int:
         return 0
 
+    # ============ List 操作 ============
+
+    async def lpush(self, key: str, value: str) -> int:
+        """从左侧推入。"""
+        lst = self._data.setdefault(key, [])
+        if not isinstance(lst, list):
+            lst = []
+            self._data[key] = lst
+        lst.insert(0, str(value))
+        return len(lst)
+
+    async def lrem(self, key: str, count: int, value: str) -> int:
+        """移除指定值（count=0 移除所有）。"""
+        lst = self._data.get(key)
+        if not isinstance(lst, list):
+            return 0
+        before = len(lst)
+        if count == 0:
+            self._data[key] = [x for x in lst if x != str(value)]
+        elif count > 0:
+            removed = 0
+            self._data[key] = [x for x in lst if not (x == str(value) and (removed := removed + 1) <= count)]
+        else:
+            removed = 0
+            lst2 = lst.copy()
+            for i in range(len(lst2) - 1, -1, -1):
+                if lst2[i] == str(value):
+                    del lst2[i]
+                    removed += 1
+                    if removed == -count:
+                        break
+            self._data[key] = lst2
+        return before - len(self._data.get(key, []))
+
+    async def ltrim(self, key: str, start: int, stop: int) -> bool:
+        """裁剪列表。"""
+        lst = self._data.get(key)
+        if not isinstance(lst, list):
+            return False
+        if start < 0:
+            start = max(len(lst) + start, 0)
+        if stop < 0:
+            stop = max(len(lst) + stop, 0)
+        self._data[key] = lst[start:stop + 1]
+        return True
+
+    async def lrange(self, key: str, start: int, stop: int) -> list:
+        lst = self._data.get(key)
+        if not isinstance(lst, list):
+            return []
+        return lst[start:stop + 1]
+
+    # ============ Scan / Keys ============
+
     async def scan_iter(self, match: str = "*", count: int = 100):
         """Async generator，兼容 async for。"""
         if False:
-            yield  # 空 async generator
+            yield
 
     async def keys(self, pattern: str = "*"):
         return []
@@ -147,6 +211,40 @@ class FakeRedis:
     async def aclose(self):
         self._data.clear()
         self._expiry.clear()
+
+
+class FakeRedisPipeline:
+    """模拟 Redis pipeline（MULTI/EXEC 事务），收集命令后一次性写入。"""
+
+    def __init__(self, redis: FakeRedis):
+        self._redis = redis
+        self._commands: list = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.execute()
+
+    async def lrem(self, key, count, value):
+        self._commands.append(("lrem", key, count, value))
+
+    async def lpush(self, key, value):
+        self._commands.append(("lpush", key, value))
+
+    async def ltrim(self, key, start, stop):
+        self._commands.append(("ltrim", key, start, stop))
+
+    async def execute(self):
+        for cmd in self._commands:
+            op = cmd[0]
+            if op == "lrem":
+                await self._redis.lrem(cmd[1], cmd[2], cmd[3])
+            elif op == "lpush":
+                await self._redis.lpush(cmd[1], cmd[2])
+            elif op == "ltrim":
+                await self._redis.ltrim(cmd[1], cmd[2], cmd[3])
+        self._commands.clear()
 
 
 # ═══════════════════════════════════════════════
@@ -193,6 +291,7 @@ async def patch_redis(_fake_redis):
     import app.services.user_service as user_svc_mod
     import app.services.recommendation_service as rec_svc_mod
     import app.services.ranking_service as ranking_svc_mod
+    import app.services.history_service as history_svc_mod
 
     modules = [
         redis_mod,
@@ -205,6 +304,7 @@ async def patch_redis(_fake_redis):
         user_svc_mod,
         rec_svc_mod,
         ranking_svc_mod,
+        history_svc_mod,
     ]
 
     originals = {}

@@ -49,7 +49,9 @@ async def flush_views_to_db() -> None:
                     article_id = int(parts[1])
                 except ValueError:
                     continue
-                cnt = await redis.get(key)
+                # GETSET 原子操作：取旧值并归零
+                # 即使此后的 INCR 从 0 开始，下次刷库会累加正确值，不会丢失
+                cnt = await redis.getset(key, 0)
                 if not cnt or int(cnt) <= 0:
                     continue
                 # 累加到 MySQL views 字段
@@ -58,8 +60,6 @@ async def flush_views_to_db() -> None:
                         views=Article.views + int(cnt)
                     )
                 )
-                # 归零 Redis 计数（保留 key）
-                await redis.set(key, 0)
                 count += 1
             await db.commit()
             if count:

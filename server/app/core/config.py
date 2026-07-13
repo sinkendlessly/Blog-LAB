@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     RABBITMQ_VHOST: str = "/"
     RABBITMQ_URL: str = ""
     NOTIFICATION_QUEUE: str = "notifications"
+    IMAGE_PROCESSING_QUEUE: str = "image_processing"
+    RANKING_QUEUE: str = "ranking"
 
     @property
     def rabbitmq_url(self) -> str:

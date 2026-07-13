@@ -170,5 +170,17 @@ tmp_*
 *.tmp_*
 test_*.log
 
-# Claude Code 技能锁（本地工具状态）
+# Claude Code（本地工具状态 + 技能配置）
+.claude-plugin/
+AGENTS.md
+CLAUDE.md
 skills-lock.json
+
+# PPT 相关（技能 + 演示构建产物 + 模板 10000+ 文件）
+skills/
+docs/presentation/
+projects/
+ppt-master-main/
+ppt-master.zip
+.ppt-master-tmp/
+.ppt-master.tar.gz

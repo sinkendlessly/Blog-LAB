@@ -57,6 +57,9 @@ async def start_consumer() -> bool:
         logger.warning("RabbitMQ not connected, notification consumer disabled")
         return False
 
+    # 每次仅预取 1 条消息，处理完 ack 后再取下一条，防止消息堆积打爆内存
+    await channel.set_qos(prefetch_count=1)
+
     queue = await channel.declare_queue(settings.NOTIFICATION_QUEUE, durable=True)
     _consumer_tag = await queue.consume(on_message)
     logger.info("Notification consumer started on queue: %s", settings.NOTIFICATION_QUEUE)

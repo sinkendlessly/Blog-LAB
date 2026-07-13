@@ -36,6 +36,7 @@ class Article(Base):
     )
     views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_pinned: Mapped[bool] = mapped_column(Integer, default=0, nullable=False, comment="管理员置顶")
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False, comment="乐观锁版本号")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

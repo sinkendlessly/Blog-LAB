@@ -209,7 +209,7 @@ tags: [${article.tags.map(t => `"${t.name}"`).join(", ")}]
                 <>
                   <div className="h-4 w-px bg-border" />
                   <Link
-                    to={`/editor/${article.id}`}
+                    to={`/editor/${article.slug}`}
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
                   >
                     <PenSquare className="h-3.5 w-3.5" />
@@ -220,7 +220,7 @@ tags: [${article.tags.map(t => `"${t.name}"`).join(", ")}]
             </div>
 
             {/* Markdown 正文（含代码块复制按钮） */}
-            <div id="article-content" className="prose prose-neutral max-w-none">
+            <div id="article-content" className="prose prose-neutral dark:prose-invert max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}

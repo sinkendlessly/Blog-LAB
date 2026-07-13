@@ -36,7 +36,8 @@
 | 后端 | Python 3.12 + FastAPI + SQLAlchemy 2.0(async) + Alembic + Pydantic v2 + PyJWT |
 | 数据库 | MySQL 8.0（utf8mb4，LONGTEXT 存储 Markdown） |
 | 缓存 | Redis 7（RDB+AOF 混合持久化） |
-| 部署 | Docker + Docker Compose（MySQL + Redis + FastAPI + Nginx） |
+| 消息队列 | RabbitMQ 3.13（aio-pika 异步消费，prefetch=1） |
+| 部署 | Docker + Docker Compose（MySQL + Redis + RabbitMQ + FastAPI Gunicorn 4 workers + Nginx） |
 
 ## 功能特性
 
@@ -56,10 +57,14 @@
 - 👤 **用户系统** — JWT 双 Token 认证 / 手机号绑定 / 关注 / 统计
 - 📱 **PWA 支持** — 可添加到主屏幕
 - ☁️ **阿里云 OSS** — 可选图片存储后端
-- 🛡️ **并发安全** — 唯一约束 + IntegrityError 兜底，防点赞/收藏重复
+- 🛡️ **并发安全** — 三重防护：DB 唯一约束 + IntegrityError 兜底 + SELECT FOR UPDATE 行级锁，防重复/丢失更新
 - 🔗 **请求追踪** — X-Request-ID 贯穿全链路，日志 + 安全头中间件
-- 📨 **异步通知** — RabbitMQ 解耦通知投递，点赞/评论/关注不阻塞请求
-- ⚡ **列表缓存** — 首页文章列表 Redis 缓存，减少数据库压力
+- 📨 **异步通知** — RabbitMQ 解耦通知投递（prefetch=1 防堆积），点赞/评论/关注不阻塞请求
+- 🖼 **异步图片处理** — 上传后 MQ 异步压缩 + WebP 转换 + 缩略图生成，不阻塞响应
+- 🔥 **排行榜延迟刷新** — MQ 攒批处理（50条或30秒），减少 Redis 写入频率
+- ⚡ **列表缓存** — 首页文章列表 Redis 缓存，减少数据库压力；slug→id 映射缓存加速详情查询
+- ⏱ **防慢查询** — 全局请求超时中间件（30s），超时自动 504 降级
+- 👥 **关注动态** — 关注用户列表 + 他们的最新文章聚合展示
 
 ## 项目结构
 
@@ -80,7 +85,7 @@ blogshare/
 │   │   ├── services/       # 业务逻辑层
 │   │   ├── schemas/        # Pydantic 校验
 │   │   ├── core/           # 配置/依赖/安全
-│   │   └── tasks/          # 定时任务（排行榜刷新等）
+│   │   └── tasks/          # 定时任务 + MQ 消费者（通知/图片/排行）
 │   └── alembic/            # 数据库迁移
 ├── nginx/                  # Nginx 反向代理配置
 ├── redis/                  # Redis 持久化配置
@@ -200,8 +205,10 @@ docker compose up -d --build
 | PyJWT | 双 Token 认证（access + refresh） |
 | Alembic | 数据库迁移 |
 | Docker + Docker Compose | 容器化部署（含 RabbitMQ 编排） |
-| aio-pika + RabbitMQ | 异步消息队列 / 通知解耦 |
+| aio-pika + RabbitMQ | 异步消息队列 / 通知 / 图片 / 排行解耦 |
+| Pillow | 图片压缩（JPEG optimize）+ WebP + 缩略图 |
 | oss2 | 阿里云 OSS 存储（可选） |
+| **PPT Master** | AI 演示文稿生成系统（原生 PPTX 输出） |
 
 ## 优化与改进记录
 
@@ -222,13 +229,22 @@ docker compose up -d --build
 
 ### 并发安全层面
 - **interactions 唯一约束**：为点赞/收藏/分享表添加 `UNIQUE(user_id, target_id, target_type, action)` 联合唯一约束，配合 `IntegrityError` 异常捕获，双重保障防重复写入
+- **关注操作兜底**：Follow 复合主键 + IntegrityError 捕获，防并发关注冲突
 - **Slug 并发兜底**：同名文章并发创建时捕获唯一约束冲突，自动重试生成带后缀的 slug，替代原先的 500 错误
 - **Redis 连接加固**：配置 socket 超时（5s/10s）、自动重试和健康检查，避免 Redis 故障时请求挂死
-- **缓存层防护**：空值缓存短 TTL 防穿透，TTL ±20% 随机抖动防雪崩
+- **缓存层防护**：空值缓存短 TTL 防穿透，TTL ±20% 随机抖动防雪崩，SET NX 锁防击穿
+- **浏览量原子刷库**：`GETSET` 原子操作取旧值并归零，消除并发下浏览量丢失窗口
+- **文章乐观锁**：`SELECT ... FOR UPDATE` 行级锁防丢失更新（lost update），version 字段输出至前端
+- **全局请求超时**：30s 超时中间件，慢查询自动 504 降级，防止连接池耗尽
+- **上传并发控制**：`asyncio.Semaphore(5)` 限制同时上传数，分块读取 + `run_in_executor` 避免阻塞事件循环
+- **RabbitMQ 消费者保护**：`prefetch_count=1` 防止消息堆积打爆内存
+- **浏览历史原子化**：Redis pipeline（MULTI/EXEC）包裹 lrem/lpush/ltrim，防止并发下重复/截断异常
+- **分享幂等**：`record_share` 捕获唯一约束冲突，同一用户同一平台重复分享静默忽略
 
 ### 前端体验
 - **编辑器**：从基础 Markdown 文本域升级为 Typora 风格 WYSIWYG + WPS Ribbon 工具栏（字体/字号/行距/样式预设）
-- **主题**：默认暗色模式 → 霓虹赛博配色，点击切换亮色
+- **编辑器侧栏**：封面编辑（预览/上传/移除）、分类、标签、摘要实时编辑，不再藏在发布弹窗
+- **主题**：默认暗色模式 → 霓虹赛博配色，点击切换亮色，暗色紫色星空 / 亮色暖金粒子背景
 - **动态背景**：集成 Three.js WebGL 组件（银河粒子 / 霓虹高速公路 / 液态流动）
 - **玻璃质感**：卡片使用 `backdrop-filter: blur()` 半透毛玻璃效果
 - **打字机标题**：首页副标题 GSAP 逐字动画循环
@@ -242,6 +258,8 @@ docker compose up -d --build
 - **数据库精简**：11 张业务表 → 7 张，去除 archive 归档接口
 - **中间件体系**：请求追踪 ID（全链路串联） + 访问日志（方法/状态/耗时） + 安全响应头（X-Frame-Options/X-Content-Type-Options）
 - **RabbitMQ 集成**：通知系统从同步写 DB 改造为异步消息队列，5 条通知链路（点赞/收藏/评论/回复/关注）全部异步投递
+- **图片处理 MQ 化**：上传后发 MQ 消息，消费者异步压缩（JPEG quality=85） + WebP 转换 + 缩略图生成，上传接口不等待
+- **排行榜延迟刷新**：点赞/收藏/浏览改为 MQ 消息，消费者攒批 50 条或 30 秒批量刷新 ZSet，减少写入频率
 - **列表缓存**：首页文章列表接入 Redis 缓存（仅缓存首屏 ID + 游标），翻页查 DB，缓存自动失效
 - **详情缓存**：slug→id 映射缓存（TTL 1h），绕过 slug 查询直接用主键索引
 - **连接池监控**：`get_db()` 注入时检查连接池水位 ≥80% 时打印 warning
@@ -272,11 +290,11 @@ docker compose up -d --build
 - 嵌套评论系统（树形结构，支持点赞/排序/删除权限）
 - OSS 存储抽象层，支持本地磁盘 / 阿里云 OSS 一键切换
 - PWA 支持，可添加到主屏幕
-- 设计并发安全体系：DB 唯一约束 + IntegrityError 兜底 + SET NX 原子去重 + 缓存 TTL 抖动防护
-- 搭建中间件栈：请求追踪 ID / 访问日志 / 安全响应头 / Redis 限流
-- 集成 RabbitMQ 异步消息队列，将 5 条通知链路从同步写 DB 改造为异步投递，消除请求阻塞
-- 实现首页文章列表 Redis 缓存 + slug→id 映射缓存，降低数据库查询压力
-- 构建 NestJs 风格中间件架构（RequestID → AccessLog → RateLimit → SecurityHeaders），支持全链路日志追踪
+- 设计并发安全体系：DB 唯一约束 + IntegrityError 兜底 + SELECT FOR UPDATE 行级锁 + SET NX 原子去重 + GETSET 原子归零 + pipeline 事务化 + 缓存 TTL 抖动防护
+- 搭建中间件栈：请求追踪 ID / 访问日志 / 安全响应头 / Redis 限流 / 请求超时（30s 504 降级）
+- 集成 RabbitMQ 异步消息队列（prefetch=1），覆盖通知投递（5条链路）+ 图片压缩 + 排行刷新，全部异步化解耦
+- 实现首页文章列表 Redis 缓存 + slug→id 映射缓存 + 空值短 TTL 防穿透，降低数据库查询压力
+- 构建 NestJs 风格中间件架构（RequestID → AccessLog → SecurityHeaders → BodySizeLimit → RateLimit → Timeout），支持全链路日志追踪与超时防护
 
 **技术亮点：**
 - 使用 `selectinload` + 自定义 SQL 优化 ORM 查询，修复 SQLAlchemy 自引用模型 identity map 问题
@@ -320,7 +338,7 @@ app/services/llm_service.py  # LLM 调用封装
 | 方向 | 建议 | 说明 |
 |------|------|------|
 | **搜索增强** | 接入 Meilisearch / Elasticsearch | 当前 SQL LIKE 搜索性能差，不支持中文分词 |
-| **评论分页** | 超过 50 条评论启用懒加载 | 当前一次性加载全部评论，大文章卡顿 |
+| **评论分页** | 已实现 — 游标分页，每页 20 条根评论 | ✅ |
 | **图片优化** | 接入图片压缩 + WebP 转换 | 上传原图过大，影响加载速度 |
 | **CDN** | 静态资源 + 图片走 CDN | 减少服务器带宽压力 |
 | **消息推送** | WebSocket / SSE 实时通知 | 当前需刷新才能看到新通知 |

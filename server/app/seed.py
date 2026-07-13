@@ -10,9 +10,7 @@ from sqlalchemy import select
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal, engine
 from app.db.base import Base
-from app.models.user import User
-from app.models.category import Category
-from app.models.tag import Tag
+from app.models import ensure_models_loaded
 from app.utils.slug import slugify
 
 ADMIN_EMAIL = "admin@blogshare.com"
@@ -32,6 +30,13 @@ TAGS = ["React", "FastAPI", "Python", "MySQL", "Redis", "Docker", "TypeScript", 
 
 
 async def main() -> None:
+    # 确保所有 ORM 模型注册（解决 relationship 延迟解析）
+    ensure_models_loaded()
+
+    from app.models.user import User
+    from app.models.category import Category
+    from app.models.tag import Tag
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

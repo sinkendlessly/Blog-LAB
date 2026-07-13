@@ -180,7 +180,7 @@ export default function ReviewPage() {
               ✕
             </button>
             <h2 className="mb-4 text-xl font-bold">{previewArticle.title}</h2>
-            <div className="prose prose-neutral max-w-none text-sm">
+            <div className="prose prose-neutral dark:prose-invert max-w-none text-sm">
               {previewArticle.excerpt && <p className="text-muted-foreground">{previewArticle.excerpt}</p>}
               <div className="mt-4 whitespace-pre-wrap">{previewArticle.content?.slice(0, 1000)}{previewArticle.content?.length > 1000 ? "..." : ""}</div>
             </div>

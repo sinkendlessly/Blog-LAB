@@ -10,7 +10,7 @@ export const commentApi = {
       .then((r) => r.data),
 
   list: (articleId: number, sort?: string) =>
-    api.get<Comment[]>("/comments", { params: { article_id: articleId, sort: sort ?? "latest" } }).then((r) => r.data),
+    api.get<{ items: Comment[] }>("/comments", { params: { article_id: articleId, sort: sort ?? "latest" } }).then((r) => r.data.items),
 
   remove: (id: number) => api.delete(`/comments/${id}`).then((r) => r.data),
 
