@@ -24,6 +24,9 @@ export const articleApi = {
   getBySlug: (slug: string) =>
     api.get<Article>(`/articles/${slug}`).then((r) => r.data),
 
+  getById: (id: number) =>
+    api.get<Article>(`/articles/${id}`).then((r) => r.data),
+
   create: (data: {
     title: string; content: string; excerpt?: string; cover_image?: string;
     category_id?: number; tag_ids?: number[]; status?: string;

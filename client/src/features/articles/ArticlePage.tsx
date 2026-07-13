@@ -209,7 +209,7 @@ tags: [${article.tags.map(t => `"${t.name}"`).join(", ")}]
                 <>
                   <div className="h-4 w-px bg-border" />
                   <Link
-                    to={`/editor/${article.slug}`}
+                    to={`/editor/${article.id}`}
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
                   >
                     <PenSquare className="h-3.5 w-3.5" />

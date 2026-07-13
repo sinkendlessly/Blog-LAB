@@ -47,7 +47,7 @@ export default function EditorPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
-  const [articleId, setArticleId] = useState<number | null>(id ? Number(id) : null);
+  const [articleId, setArticleId] = useState<number | null>(id ? Number(id) || null : null);
   const [draftRestored, setDraftRestored] = useState(false);
 
   // 发布设置
@@ -64,10 +64,13 @@ export default function EditorPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // 编辑模式：加载已有文章
+  // 编辑模式：加载已有文章（支持 ID 或 slug）
   const { data: article, isLoading } = useQuery({
-    queryKey: ["article", id],
-    queryFn: () => articleApi.getBySlug(id!),
+    queryKey: ["article-edit", id],
+    queryFn: () => {
+      const numId = Number(id);
+      return numId ? articleApi.getById(numId) : articleApi.getBySlug(id!);
+    },
     enabled: !!id,
   });
 
@@ -75,6 +78,7 @@ export default function EditorPage() {
     if (article) {
       setTitle(article.title);
       setContent(article.content);
+      setArticleId(article.id); // ← 从加载的文章中获取真实 ID，修复 slug 转 ID 为 NaN 的问题
       setCategoryId(article.category?.id);
       setTagIds(article.tags.map((t) => t.id));
       setExcerpt(article.excerpt ?? "");
