@@ -1,4 +1,5 @@
 """FastAPI 依赖注入：DB 会话、Redis、当前用户、角色校验。"""
+import logging
 import jwt
 from typing import AsyncIterator, Optional
 
@@ -7,15 +8,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
 from app.core.security import decode_token
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
 from app.middleware.error_handler import AppException
 from app.models.user import User
 from app.services.auth_service import AuthService
 from app.utils.redis_keys import RedisKeys
 
+logger = logging.getLogger(__name__)
+
+# 连接池使用率告警阈值
+POOL_WARN_THRESHOLD = 0.8
+
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    """注入异步数据库会话。"""
+    """注入异步数据库会话，同时监控连接池水位。"""
+    # 连接池水位检查（仅打印 warning，不阻塞请求）
+    _check_db_pool()
+
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -23,6 +32,25 @@ async def get_db() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
+
+
+def _check_db_pool() -> None:
+    """检查数据库连接池使用率，超过阈值时打印 warning。"""
+    try:
+        pool = engine.pool
+        total = pool.size() + pool.overflow()
+        if total <= 0:
+            return
+        checkedin = pool.checkedin()
+        in_use = total - checkedin
+        ratio = in_use / total
+        if ratio >= POOL_WARN_THRESHOLD:
+            logger.warning(
+                "DB pool usage: %.0f%% (%d/%d) checkedin=%d size=%d overflow=%d",
+                ratio * 100, in_use, total, checkedin, pool.size(), pool.overflow(),
+            )
+    except Exception:
+        pass  # pool 状态检查失败不影响请求
 
 
 def get_redis_client():

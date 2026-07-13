@@ -17,6 +17,10 @@ async def init_redis() -> aioredis.Redis:
         encoding="utf-8",
         decode_responses=True,
         max_connections=50,
+        socket_connect_timeout=5,   # 连接超时 5 秒（默认永不超时）
+        socket_timeout=10,          # 读写超时 10 秒（默认永不超时）
+        retry_on_timeout=True,      # 超时自动重试一次
+        health_check_interval=30,   # 每 30 秒发一次 PING 检测连接健康
     )
     # 测试连接
     await redis_client.ping()

@@ -39,7 +39,7 @@ async def toggle_like(
         author_id = await _get_article_author_id(db, article_id)
         if author_id and author_id != user.id:
             notif = NotificationService(db)
-            await notif.create(
+            await notif.publish(
                 user_id=author_id,
                 actor_id=user.id,
                 type="like",
@@ -66,7 +66,7 @@ async def toggle_favorite(
         author_id = await _get_article_author_id(db, article_id)
         if author_id and author_id != user.id:
             notif = NotificationService(db)
-            await notif.create(
+            await notif.publish(
                 user_id=author_id,
                 actor_id=user.id,
                 type="favorite",

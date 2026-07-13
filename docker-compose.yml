@@ -45,6 +45,28 @@ services:
     networks:
       - blogshare-net
 
+  # ============ RabbitMQ 消息队列 ============
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: blogshare-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - blogshare-net
+
   # ============ FastAPI 后端 ============
   server:
     build:
@@ -57,10 +79,13 @@ services:
     environment:
       MYSQL_HOST: db
       REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -84,6 +109,7 @@ services:
 volumes:
   mysql_data:
   redis_data:
+  rabbitmq_data:
 
 networks:
   blogshare-net:

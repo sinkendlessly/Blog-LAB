@@ -134,28 +134,36 @@ class CommentService:
 
     # ============ 点赞 ============
     async def toggle_like(self, comment_id: int, user_id: int) -> dict:
-        """切换评论点赞状态，返回 {liked, like_count}。"""
+        """切换评论点赞状态，返回 {liked, like_count}。
+
+        同 interactions 表唯一约束 + IntegrityError 兜底。
+        """
         from app.models.interaction import Interaction
+        from sqlalchemy.exc import IntegrityError
         comment = await self.db.get(Comment, comment_id)
         if not comment:
             raise AppException("评论不存在", 404, "COMMENT_NOT_FOUND")
 
-        existing = await self.db.scalar(
-            select(Interaction.id).where(
-                Interaction.user_id == user_id,
-                Interaction.target_id == comment_id,
-                Interaction.target_type == "comment",
-                Interaction.action == "like",
+        try:
+            existing = await self.db.scalar(
+                select(Interaction.id).where(
+                    Interaction.user_id == user_id,
+                    Interaction.target_id == comment_id,
+                    Interaction.target_type == "comment",
+                    Interaction.action == "like",
+                )
             )
-        )
-        if existing:
-            await self.db.execute(delete(Interaction).where(Interaction.id == existing))
-            await self.db.flush()
-            liked = False
-        else:
-            self.db.add(Interaction(user_id=user_id, target_id=comment_id,
-                                     target_type="comment", action="like"))
-            await self.db.flush()
+            if existing:
+                await self.db.execute(delete(Interaction).where(Interaction.id == existing))
+                await self.db.flush()
+                liked = False
+            else:
+                self.db.add(Interaction(user_id=user_id, target_id=comment_id,
+                                         target_type="comment", action="like"))
+                await self.db.flush()
+                liked = True
+        except IntegrityError:
+            await self.db.rollback()
             liked = True
 
         # 重新统计点赞数

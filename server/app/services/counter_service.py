@@ -10,6 +10,7 @@ from typing import Optional
 
 from sqlalchemy import select, delete, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.core.redis import get_redis
 from app.models.interaction import Interaction
@@ -25,27 +26,39 @@ class CounterService:
 
     # ============ 文章点赞 ============
     async def like(self, user_id: int, article_id: int) -> bool:
-        """点赞/取消点赞（toggle），返回是否已点赞。"""
-        existing = await self.db.scalar(
-            select(Interaction.id).where(
-                Interaction.user_id == user_id,
-                Interaction.target_id == article_id,
-                Interaction.target_type == "article",
-                Interaction.action == "like",
+        """点赞/取消点赞（toggle），返回是否已点赞。
+
+        并发安全策略（三重防护）：
+        ① 正常路径：SELECT → 不存在则 INSERT，存在则 DELETE
+        ② 唯一约束：DB 层 UNIQUE(user_id, target_id, target_type, action) 防止重复
+        ③ 异常兜底：并发 INSERT 冲突时捕获 IntegrityError，返回已点赞
+        """
+        try:
+            existing = await self.db.scalar(
+                select(Interaction.id).where(
+                    Interaction.user_id == user_id,
+                    Interaction.target_id == article_id,
+                    Interaction.target_type == "article",
+                    Interaction.action == "like",
+                )
             )
-        )
-        if existing:
-            await self.db.execute(
-                delete(Interaction).where(Interaction.id == existing)
+            if existing:
+                await self.db.execute(
+                    delete(Interaction).where(Interaction.id == existing)
+                )
+                await self.db.flush()
+                return False
+            self.db.add(
+                Interaction(user_id=user_id, target_id=article_id,
+                            target_type="article", action="like")
             )
             await self.db.flush()
-            return False
-        self.db.add(
-            Interaction(user_id=user_id, target_id=article_id,
-                        target_type="article", action="like")
-        )
-        await self.db.flush()
-        return True
+            return True
+        except IntegrityError:
+            # 并发 INSERT 唯一约束冲突 → 记录已被另一请求插入 → 已点赞
+            await self.db.rollback()
+            logger.warning("concurrent like conflict: user=%d article=%d", user_id, article_id)
+            return True
 
     async def is_liked(self, user_id: int, article_id: int) -> bool:
         result = await self.db.scalar(
@@ -63,26 +76,35 @@ class CounterService:
 
     # ============ 文章收藏 ============
     async def favorite(self, user_id: int, article_id: int) -> bool:
-        existing = await self.db.scalar(
-            select(Interaction.id).where(
-                Interaction.user_id == user_id,
-                Interaction.target_id == article_id,
-                Interaction.target_type == "article",
-                Interaction.action == "favorite",
+        """收藏/取消收藏（toggle），返回是否已收藏。
+
+        并发安全策略同 like()：唯一约束 + IntegrityError 兜底。
+        """
+        try:
+            existing = await self.db.scalar(
+                select(Interaction.id).where(
+                    Interaction.user_id == user_id,
+                    Interaction.target_id == article_id,
+                    Interaction.target_type == "article",
+                    Interaction.action == "favorite",
+                )
             )
-        )
-        if existing:
-            await self.db.execute(
-                delete(Interaction).where(Interaction.id == existing)
+            if existing:
+                await self.db.execute(
+                    delete(Interaction).where(Interaction.id == existing)
+                )
+                await self.db.flush()
+                return False
+            self.db.add(
+                Interaction(user_id=user_id, target_id=article_id,
+                            target_type="article", action="favorite")
             )
             await self.db.flush()
-            return False
-        self.db.add(
-            Interaction(user_id=user_id, target_id=article_id,
-                        target_type="article", action="favorite")
-        )
-        await self.db.flush()
-        return True
+            return True
+        except IntegrityError:
+            await self.db.rollback()
+            logger.warning("concurrent favorite conflict: user=%d article=%d", user_id, article_id)
+            return True
 
     async def is_favorited(self, user_id: int, article_id: int) -> bool:
         result = await self.db.scalar(

@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, DateTime, func, ForeignKey, Integer, Enum as SAEnum
+from sqlalchemy import String, DateTime, func, ForeignKey, Integer, Enum as SAEnum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,9 +17,17 @@ if TYPE_CHECKING:
 class Interaction(Base):
     """用户互动记录（点赞/收藏/分享）。
 
-    UNIQUE(user_id, target_id, target_type, action) 确保幂等。
+    UNIQUE(user_id, target_id, target_type, action) 确保幂等，
+    防止并发下 TOCTOU 竞态产生重复记录。
     """
     __tablename__ = "interactions"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "target_id", "target_type", "action",
+            name="uq_interactions_user_target_action",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(

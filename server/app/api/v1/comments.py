@@ -34,7 +34,7 @@ async def create_comment(
         # 回复评论 → 通知被回复者
         parent = await db.get(Comment, payload.parent_id)
         if parent and parent.user_id != user.id:
-            await notif.create(
+            await notif.publish(
                 user_id=parent.user_id,
                 actor_id=user.id,
                 type="reply",
@@ -46,7 +46,7 @@ async def create_comment(
         # 评论文章 → 通知文章作者
         result = await db.scalar(select(Article.author_id).where(Article.id == article_id))
         if result and result != user.id:
-            await notif.create(
+            await notif.publish(
                 user_id=result,
                 actor_id=user.id,
                 type="comment",

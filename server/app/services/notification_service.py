@@ -6,6 +6,8 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
+from app.core.rabbitmq import publish_message as mq_publish
 from app.models.notification import Notification
 
 
@@ -22,7 +24,7 @@ class NotificationService:
         link: Optional[str] = None,
         actor_id: Optional[int] = None,
     ) -> Notification:
-        """创建一条通知。"""
+        """创建一条通知（同步写入 DB，供消费者使用）。"""
         notif = Notification(
             user_id=user_id,
             actor_id=actor_id,
@@ -34,6 +36,31 @@ class NotificationService:
         self.db.add(notif)
         await self.db.flush()
         return notif
+
+    async def publish(
+        self,
+        *,
+        user_id: int,
+        type: str,
+        title: str,
+        content: str = "",
+        link: Optional[str] = None,
+        actor_id: Optional[int] = None,
+    ) -> bool:
+        """异步发布通知消息到 RabbitMQ（不阻塞请求）。
+
+        RabbitMQ 不可用时静默降级，返回 False。
+        消费者收到消息后调用 create() 写入 DB。
+        """
+        body = {
+            "type": type,
+            "user_id": user_id,
+            "actor_id": actor_id,
+            "title": title,
+            "content": content,
+            "link": link,
+        }
+        return await mq_publish(settings.NOTIFICATION_QUEUE, body)
 
     async def list_recent(
         self,

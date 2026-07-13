@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS comments (
 
 -- ============================================================
 -- 7. 统一互动表（替代 likes + favorites + shares 旧表）
+--     UNIQUE 约束防止并发 TOCTOU 竞态产生重复记录
 -- ============================================================
 CREATE TABLE IF NOT EXISTS interactions (
     id              INT             NOT NULL AUTO_INCREMENT,
@@ -161,7 +162,7 @@ CREATE TABLE IF NOT EXISTS interactions (
     created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
-    UNIQUE KEY uq_interactions (user_id, target_id, target_type, action),
+    UNIQUE KEY uq_interactions_user_target_action (user_id, target_id, target_type, action),
     INDEX ix_interactions_user_id (user_id),
     INDEX ix_interactions_target (target_id, target_type),
     CONSTRAINT fk_interactions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

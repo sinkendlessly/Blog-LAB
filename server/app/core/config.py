@@ -47,6 +47,24 @@ class Settings(BaseSettings):
     OSS_BUCKET_NAME: str = ""
     OSS_CDN_DOMAIN: str = ""  # 绑定的 CDN/自定义域名，如 https://cdn.blogshare.com（留空则用 bucket 默认域名）
 
+    # ===== RabbitMQ =====
+    RABBITMQ_HOST: str = "localhost"
+    RABBITMQ_PORT: int = 5672
+    RABBITMQ_USER: str = "guest"
+    RABBITMQ_PASSWORD: str = "guest"
+    RABBITMQ_VHOST: str = "/"
+    RABBITMQ_URL: str = ""
+    NOTIFICATION_QUEUE: str = "notifications"
+
+    @property
+    def rabbitmq_url(self) -> str:
+        if self.RABBITMQ_URL:
+            return self.RABBITMQ_URL
+        return (
+            f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}"
+            f"@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_VHOST}"
+        )
+
     # ===== SMS 短信 =====
     SMS_PROVIDER: str = "mock"  # mock / aliyun / tencent
     SMS_SIGN_NAME: str = "BlogShare"

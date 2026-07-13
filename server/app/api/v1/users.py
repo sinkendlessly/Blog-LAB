@@ -61,7 +61,7 @@ async def toggle_follow(
     # 关注时通知对方（不通知自己）
     if followed and user_id != user.id:
         notif = NotificationService(db)
-        await notif.create(
+        await notif.publish(
             user_id=user_id,
             actor_id=user.id,
             type="follow",
