@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { MarkdownEditor } from "@/components/editor/MarkdownEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
+import AIAssistant from "@/components/editor/AIAssistant";
 import { articleApi } from "@/lib/api/articles";
 import { categoryApi, uploadApi } from "@/lib/api/index";
 import { useToast } from "@/components/ui/toast";
@@ -52,6 +54,7 @@ export default function EditorPage() {
 
   // 发布设置
   const [publishOpen, setPublishOpen] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const [categoryId, setCategoryId] = useState<number | undefined>();
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [excerpt, setExcerpt] = useState("");
@@ -372,6 +375,15 @@ export default function EditorPage() {
             className="flex-1 w-full resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
             style={{ minHeight: "80px" }}
           />
+
+          {/* AI 助手触发按钮 */}
+          <button
+            onClick={() => setShowAI(!showAI)}
+            className="mt-2 flex items-center justify-center gap-1 rounded-md border py-1.5 text-xs transition-colors hover:bg-accent"
+          >
+            <Sparkles className="h-3 w-3 text-purple-500" />
+            {showAI ? "关闭 AI" : "AI 助手"}
+          </button>
         </div>
 
         {/* 右侧 Markdown 编辑器 */}
@@ -383,6 +395,16 @@ export default function EditorPage() {
             saving={saveMutation.isPending}
           />
         </div>
+
+        {/* AI 助手侧栏 */}
+        {showAI && (
+          <div className="w-80 shrink-0">
+            <AIAssistant
+              onInsert={(text) => handleContentChange(content + "\n" + text)}
+              onClose={() => setShowAI(false)}
+            />
+          </div>
+        )}
       </div>
 
       {/* 发布设置弹窗 */}
