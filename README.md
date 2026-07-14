@@ -65,6 +65,12 @@
 - ⚡ **列表缓存** — 首页文章列表 Redis 缓存，减少数据库压力；slug→id 映射缓存加速详情查询
 - ⏱ **防慢查询** — 全局请求超时中间件（30s），超时自动 504 降级
 - 👥 **关注动态** — 关注用户列表 + 他们的最新文章聚合展示
+- 🏷 **智能标签推荐** — DeepSeek LLM 自动匹配分类和标签，替换关键词匹配
+- 📝 **AI 文章摘要** — 发布文章时 LLM 自动生成摘要，存入 excerpt
+- ✍️ **AI 写作助手** — 编辑器侧栏对话面板 + SSE 流式润色/续写/翻译
+- 💬 **评论审核** — LLM 自动检测违规/广告评论
+- 🧠 **知识库问答** — Chroma 向量检索 + RAG 问答
+- 👤 **个性化推荐** — 基于浏览历史的 embedding 相似度推荐
 
 ## 项目结构
 
@@ -306,34 +312,35 @@ docker compose up -d --build
 
 ---
 
-## 后期规划与 AI 接入建议
+## AI 智能助手集成（已实现 ✅）
 
-### 1. AI 智能助手集成
+基于 DeepSeek + Chroma 的 6 层 AI 能力，所有功能在 API Key 未配置时静默降级。
 
-| 功能 | 方案 | 优先级 |
-|------|------|--------|
-| **文章 AI 摘要** | 调用 LLM API 自动生成文章摘要/导读，存入 `articles.excerpt` | ⭐⭐⭐ |
-| **智能标签推荐** | 基于文章内容 embedding，自动匹配分类 + 标签（当前已有关键词匹配雏形） | ⭐⭐⭐ |
-| **AI 写作助手** | 编辑器内嵌 AI 续写/润色/翻译功能，StreamingResponse SSE 流式输出 | ⭐⭐⭐ |
-| **知识库问答** | 将已发布文章做 embedding → 存入向量数据库 → 用户提问时 RAG 检索回答 | ⭐⭐ |
-| **评论审核** | 自动检测评论中的垃圾/违规内容，标记或拦截 | ⭐⭐ |
-| **个性化推荐** | 基于用户浏览/点赞历史，embedding 相似度推荐相关文章 | ⭐⭐ |
+| 功能 | 技术方案 | 状态 |
+|------|----------|------|
+| 🏷 **智能标签推荐** | LLM 分析文章内容 → 自动匹配分类和标签 | ✅ 替换关键词匹配 |
+| 📝 **AI 文章摘要** | LLM 生成 100-150 字摘要 → 存入 `excerpt` | ✅ 发布时自动触发 |
+| ✍️ **AI 写作助手** | SSE 流式输出 + 编辑器侧栏对话面板（润色/续写/翻译） | ✅ |
+| 💬 **评论审核** | LLM 检测违规内容 → 标记 `is_flagged` | ✅ |
+| 🧠 **知识库问答** | Chroma embedding → RAG 检索 → LLM 回答 | ✅ |
+| 👤 **个性化推荐** | 浏览历史 embedding 相似度 → Chroma 检索 | ✅ |
 
-**技术选型建议：**
+**技术选型：**
 
-```python
-# 后端预留了 AI 扩展入口
-app/api/v1/chat.py          # 对话接口
-app/services/llm_service.py  # LLM 调用封装
-# 可选向量库：Qdrant / Milvus / Chroma（本地轻量）
+| 技术 | 用途 |
+|------|------|
+| DeepSeek API | LLM 补全（deepseek-chat）+ Embedding（deepseek-embedding） |
+| ChromaDB | 本地持久化向量库（余弦相似度检索） |
+| SSE (Server-Sent Events) | 写作助手流式输出 |
+
+快速配置（`.env`）：
+
+```env
+DEEPSEEK_API_KEY=sk-your-key-here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-- LLM 推荐：OpenAI GPT-4o / Claude 3.5 Sonnet / 本地部署 DeepSeek
-- Embedding 模型：text-embedding-3-small / BGE-large-zh
-- 向量数据库：Qdrant（云服务） / Chroma（本地开发）
-- RAG 架构：LangChain / LlamaIndex
-
-### 2. 架构改进建议
+### 架构改进建议
 
 | 方向 | 建议 | 说明 |
 |------|------|------|
