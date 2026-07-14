@@ -21,6 +21,7 @@ const DashboardPage = lazy(() => import("@/features/admin/DashboardPage"));
 const ReviewPage = lazy(() => import("@/features/admin/ReviewPage"));
 const ArticlesManagePage = lazy(() => import("@/features/admin/ArticlesManagePage"));
 const UsersPage = lazy(() => import("@/features/admin/UsersPage"));
+const AIAskPage = lazy(() => import("@/pages/AIAskPage"));
 
 /** 路由切换时的加载占位。 */
 function PageLoader() {
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/my/favorites" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><MyFavoritesPage /></Suspense></ProtectedRoute>} />
           <Route path="/my/following" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><MyFollowingPage /></Suspense></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><SettingsPage /></Suspense></ProtectedRoute>} />
+          <Route path="/ai/ask" element={<Suspense fallback={<PageLoader />}><AIAskPage /></Suspense>} />
 
           {/* 用户主页 */}
           <Route path="/user/:id" element={<Suspense fallback={<PageLoader />}><UserProfilePage /></Suspense>} />

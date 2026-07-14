@@ -91,6 +91,25 @@ class ArticleService:
                     except Exception as e:
                         logger.warning("AI summary failed: %s", e)
 
+                # Chroma 向量库同步（已发布文章）
+                if article.status == "PUBLISHED" and settings.DEEPSEEK_API_KEY:
+                    try:
+                        from app.core.embeddings import EmbeddingService
+                        from app.services.llm_service import LLMService
+                        llm = LLMService()
+                        embedding = await llm.embed_text(f"{article.title}\n{article.content[:2000]}")
+                        if embedding:
+                            await EmbeddingService().upsert_article(
+                                article_id=article.id,
+                                embedding=embedding,
+                                title=article.title,
+                                slug=article.slug,
+                                content=article.content,
+                                author=author.username,
+                            )
+                    except Exception as e:
+                        logger.warning("Chroma sync failed: %s", e)
+
                 # 失效列表缓存
                 await self.cache.delete_pattern("cache:articles:list:*")
                 return article
@@ -170,6 +189,21 @@ class ArticleService:
         # 发布/下架时异步刷新热度
         if article.status == "PUBLISHED":
             await self._publish_ranking_refresh(article.id)
+            # Chroma 向量同步
+            if settings.DEEPSEEK_API_KEY:
+                try:
+                    from app.core.embeddings import EmbeddingService
+                    from app.services.llm_service import LLMService
+                    llm = LLMService()
+                    embedding = await llm.embed_text(f"{article.title}\n{article.content[:2000]}")
+                    if embedding:
+                        await EmbeddingService().upsert_article(
+                            article_id=article.id, embedding=embedding,
+                            title=article.title, slug=article.slug,
+                            content=article.content, author=author.username,
+                        )
+                except Exception as e:
+                    logger.warning("Chroma sync failed on update: %s", e)
         else:
             await self.redis.zrem(RedisKeys.HOT_ARTICLES, str(article.id))
         return article
@@ -224,6 +258,13 @@ class ArticleService:
             f"cache:article:slug:{article.slug}",
         )
         await self.redis.zrem(RedisKeys.HOT_ARTICLES, str(article.id))
+        # 删除 Chroma 向量
+        if settings.DEEPSEEK_API_KEY:
+            try:
+                from app.core.embeddings import EmbeddingService
+                await EmbeddingService().remove_article(article.id)
+            except Exception as e:
+                logger.warning("Chroma remove failed: %s", e)
 
     # ============ 列表（已发布，游标分页 + 列表缓存） ============
     _CACHE_FRONTPAGE_KEY = "cache:articles:list:frontpage"

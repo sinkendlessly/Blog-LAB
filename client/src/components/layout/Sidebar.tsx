@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen, Home, FileText, Bookmark, Users, Search,
   PanelLeftClose, PanelLeft, PenSquare, Tag,
-  FileCheck, BarChart3, FolderTree, Clock,
+  FileCheck, BarChart3, FolderTree, Clock, Sparkles,
   Sun, Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ const MY_ITEMS = [
   { to: "/my/articles", label: "我的文章", icon: PenSquare },
   { to: "/my/favorites", label: "我的收藏", icon: Bookmark },
   { to: "/my/following", label: "我的关注", icon: Users },
+  { to: "/ai/ask", label: "AI 问答", icon: Sparkles },
 ];
 
 const ADMIN_ITEMS = [
