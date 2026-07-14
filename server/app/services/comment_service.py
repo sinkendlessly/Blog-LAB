@@ -1,5 +1,8 @@
 """评论服务：嵌套回复 / 列表（树形）/ 删除 / 点赞。"""
+import logging
 from typing import List, Optional, Tuple
+
+from app.core.config import settings
 
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +50,19 @@ class CommentService:
         self.db.add(comment)
         await self.db.flush()
         await self.db.refresh(comment)
+
+        # AI 审核（不阻塞，失败不影响评论发布）
+        if settings.DEEPSEEK_API_KEY and content.strip():
+            try:
+                from app.services.ai_review_service import AIReviewService
+                review_result = await AIReviewService().review(content)
+                if review_result.get("is_flagged"):
+                    comment.is_flagged = True
+                    comment.flagged_reason = review_result.get("reason") or review_result.get("category", "")
+                    await self.db.flush()
+            except Exception as e:
+                logger.warning("AI review failed: %s", e)
+
         await self.counter.incr_comment_count(article_id)
         return comment
 
