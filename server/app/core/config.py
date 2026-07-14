@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     IMAGE_PROCESSING_QUEUE: str = "image_processing"
     RANKING_QUEUE: str = "ranking"
 
+    # ===== AI / DeepSeek =====
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
+    DEEPSEEK_EMBED_MODEL: str = "deepseek-embedding"
+    DEEPSEEK_TIMEOUT: int = 30
+
     @property
     def rabbitmq_url(self) -> str:
         if self.RABBITMQ_URL:

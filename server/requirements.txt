@@ -36,6 +36,13 @@ oss2==2.18.4
 # RabbitMQ
 aio-pika>=9.5.0,<10.0.0
 
+# ===== AI =====
+httpx>=0.27.0
+chromadb>=0.4.0
+sse-starlette>=1.8.0
+# chromadb 依赖较高版 starlette，但 FastAPI 0.110 需要 <0.37
+starlette<0.37.0
+
 # ===== 测试 =====
 pytest>=8.0.0
 pytest-asyncio>=0.24.0,<0.25.0
