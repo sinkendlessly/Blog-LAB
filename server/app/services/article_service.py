@@ -79,6 +79,18 @@ class ArticleService:
                     except Exception as e:
                         logger.warning("AI tag suggestion failed: %s", e)
 
+                # AI 摘要生成（excerpt 为空时）
+                if not article.excerpt and settings.DEEPSEEK_API_KEY:
+                    try:
+                        from app.services.ai_summary_service import AISummaryService
+                        summary = await AISummaryService().generate(
+                            article.title, article.content
+                        )
+                        if summary:
+                            article.excerpt = summary
+                    except Exception as e:
+                        logger.warning("AI summary failed: %s", e)
+
                 # 失效列表缓存
                 await self.cache.delete_pattern("cache:articles:list:*")
                 return article
@@ -135,6 +147,15 @@ class ArticleService:
             # 重新变为草稿则清空发布时间
             if payload.status == "DRAFT":
                 article.published_at = None
+            # PUBLISHED 且无摘要 → AI 生成
+            if payload.status == "PUBLISHED" and not article.excerpt and settings.DEEPSEEK_API_KEY:
+                try:
+                    from app.services.ai_summary_service import AISummaryService
+                    summary = await AISummaryService().generate(article.title, article.content)
+                    if summary:
+                        article.excerpt = summary
+                except Exception as e:
+                    logger.warning("AI summary failed on publish: %s", e)
 
         await self.db.flush()
         await self.db.refresh(article)
