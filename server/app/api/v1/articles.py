@@ -201,6 +201,35 @@ async def related_articles(
     return results
 
 
+@router.get("/{slug}/recommend")
+async def recommend_articles(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user_optional),
+):
+    """基于 AI 的个性化文章推荐（浏览历史相似度）。"""
+    if not user:
+        return []
+    from app.services.article_service import ArticleService
+    article = await ArticleService(db).get_by_slug(slug)
+    if not article:
+        return []
+    from app.services.recommendation_v2 import RecommendationV2
+    recs = await RecommendationV2(db).recommend_for_user(
+        user.id, article.id, limit=5
+    )
+    return [
+        ArticleBrief(
+            id=a.id, title=a.title, slug=a.slug,
+            excerpt=a.excerpt, cover_image=a.cover_image,
+            views=a.views, author=a.author,
+            category=a.category, tags=a.tags,
+            created_at=a.created_at, published_at=a.published_at,
+        )
+        for a in recs
+    ]
+
+
 def _get_client_ip(request: Request) -> Optional[str]:
     """获取客户端真实 IP（优先取 X-Forwarded-For）。"""
     forwarded = request.headers.get("X-Forwarded-For")

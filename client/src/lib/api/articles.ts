@@ -53,6 +53,9 @@ export const articleApi = {
 
   getPinned: () =>
     api.get<ArticleBrief[]>("/articles/pinned").then((r) => r.data),
+
+  getRecommended: (slug: string) =>
+    api.get<ArticleBrief[]>(`/articles/${slug}/recommend`).then((r) => r.data),
 };
 
 export interface RelatedArticle {
