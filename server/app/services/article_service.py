@@ -66,6 +66,18 @@ class ArticleService:
                 # 标签关联
                 if payload.tag_ids:
                     await self._sync_tags(article, payload.tag_ids)
+                elif settings.DEEPSEEK_API_KEY:
+                    try:
+                        from app.services.ai_tag_service import AITagService
+                        suggestion = await AITagService(self.db).suggest(
+                            payload.title, payload.content
+                        )
+                        if suggestion["tag_ids"]:
+                            await self._sync_tags(article, suggestion["tag_ids"])
+                        if suggestion["category_id"] and not payload.category_id:
+                            article.category_id = suggestion["category_id"]
+                    except Exception as e:
+                        logger.warning("AI tag suggestion failed: %s", e)
 
                 # 失效列表缓存
                 await self.cache.delete_pattern("cache:articles:list:*")
